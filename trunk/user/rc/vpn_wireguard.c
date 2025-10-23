@@ -64,40 +64,24 @@ stop_wireguard_client(void)
     eval("/usr/bin/wgc.sh", "stop");
 }
 
-void
+int
 restart_wireguard_client(void)
 {
-    eval("/usr/bin/wgc.sh", "restart");
+    return eval("/usr/bin/wgc.sh", "restart");
 }
 
 void
 reload_wireguard_client(void)
 {
-    // update ipset + fw rules + posible reconnect
+    // update ipset + fw rules
     if (is_enabled_wireguard_client())
-        doSystem("/usr/bin/wgc.sh reload &");
+        eval("/usr/bin/wgc.sh", "reload");
 }
 
 void
 update_wireguard_client(void)
 {
-    // update fw rules + posible reconnect
+    // update fw rules
     if (is_enabled_wireguard_client())
-        doSystem("/usr/bin/wgc.sh update &");
-}
-
-void
-handshake_wireguard_client(void)
-{
-    // get latest handshake in sec
-    if (is_enabled_wireguard_client())
-        eval("/usr/bin/wgc.sh", "handshake");
-}
-
-void
-reconnect_wireguard_client(void)
-{
-    // try force reconnect
-    if (is_enabled_wireguard_client())
-        doSystem("/usr/bin/wgc.sh reconnect &");
+        eval("/usr/bin/wgc.sh", "update");
 }

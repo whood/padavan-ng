@@ -67,8 +67,7 @@ die()
 
 is_started()
 {
-    ip link show ${IF_NAME} >/dev/null 2>&1
-    return $?
+    [ -d "/sys/class/net/${IF_NAME}" ]
 }
 
 prepare_wg()
@@ -198,6 +197,8 @@ wg_if_init()
     else
         error "$IF_NAME startup failed"
     fi
+
+    send_ping
 }
 
 reconnect_wg()
@@ -205,9 +206,9 @@ reconnect_wg()
     # reconnect using current config
 
     if ! check_connected; then
-        [ "$1" ] || log "trying reconnect to $PEER_ENDPOINT"
+        [ "$1" ] || log "trying connect to $PEER_ENDPOINT"
         setconf_wg reconnect
-        check_connected
+        check_connection_status
         if [ $? -eq 0 ]; then
             log "successfully connected"
             return 0
@@ -217,38 +218,48 @@ reconnect_wg()
     fi
 }
 
-get_latest_handshake()
+get_latest_handshakes()
 {
-    # return latest handshake in sec
-
-    is_started || return 1
-
-    local lh=$($WG show $IF_NAME latest-handshakes | cut -f2)
-    local delta=$(( $(date +'%s') - $lh ))
-
-    case "$lh" in
-        0) return 1 ;;
-
-        [0-9]*)
-            echo $delta
-            if [ "$delta" -gt "300" ]; then
-                return 1
-            fi
-        ;;
-
-        *) return 1 ;;
-    esac
+    $WG show $IF_NAME latest-handshakes | cut -f2
 }
 
 send_ping()
 {
-    # trying to sending single packet trought wg interface for activating the connection web-indicator
-    ping -c1 -W8 -I $IF_NAME 8.8.8.8 >/dev/null 2>&1
+    timeout 1 ping -I $IF_NAME 255.255.255.255 >/dev/null 2>&1 &
 }
 
 check_connected()
 {
-    get_latest_handshake >/dev/null || send_ping || return 1
+    local lh now
+
+    is_started || die
+
+    lh=$(get_latest_handshakes)
+    [ "$lh" ] || die
+    [ "$lh" -eq 0 ] && return 1
+
+    now=$(date +%s)
+    if [ "$((now - lh))" -gt "300" ]; then
+        log "latest handshake was more than 5 minutes ago"
+        return 1
+    elif [ "$((now - lh))" -gt "120" ]; then
+        send_ping
+    fi
+
+    return 0
+}
+
+check_connection_status()
+{
+    local loop=0
+    while is_started; do
+        [ "$loop" -ge 10 ] && break
+        check_connected && return 0
+        loop=$((loop + 1))
+        sleep 1
+    done
+
+    return 1
 }
 
 start_wg()
@@ -260,14 +271,6 @@ start_wg()
     wg_setdns
     ipset_create
 
-    if check_connected; then
-        start_fw
-        log "successfully connected"
-    else
-        stop_fw
-        log "connection may be blocked: $PEER_ENDPOINT"
-    fi
-
     start_watchdog &
     echo $! > "$PID_WATCHDOG"
 }
@@ -276,15 +279,22 @@ start_watchdog()
 {
     [ -f "$PID_WATCHDOG" ] || return
     log "connection watchdog timer started"
-    sleep 10
+
+    if check_connection_status; then
+        start_fw
+        log "successfully connected"
+    else
+        stop_fw
+        log "connection may be blocked: $PEER_ENDPOINT"
+    fi
 
     local no_log
     while is_started; do
         if reconnect_wg $no_log; then
-            start_fw
+            check_fw || start_fw
             no_log=
         else
-            stop_fw
+            check_fw && stop_fw
             no_log=1
         fi
         sleep 10
@@ -305,15 +315,19 @@ update_wg()
 {
     is_started || return 1
 
-    if reconnect_wg no_log; then
-        start_fw
-    else
-        stop_fw
+    if check_connected; then
+        check_fw || start_fw
     fi
 }
 
 stop_wg()
 {
+    if [ -f "$PID_WATCHDOG" ]; then
+        kill "$(cat "$PID_WATCHDOG")" 2>/dev/null
+        rm -f "$PID_WATCHDOG"
+        log "connection watchdog timer stopped"
+    fi
+
     stop_fw
 
     ip route flush table $TABLE 2>/dev/null
@@ -326,12 +340,6 @@ stop_wg()
     ip link set $IF_NAME down 2>/dev/null
     ip link del dev $IF_NAME 2>/dev/null \
         && log "client stopped"
-
-    if [ -f "$PID_WATCHDOG" ]; then
-        kill "$(cat "$PID_WATCHDOG")" 2>/dev/null
-        rm -f "$PID_WATCHDOG"
-        log "connection watchdog timer stopped"
-    fi
 }
 
 filter_ipv4()
@@ -415,6 +423,11 @@ ipt_set_rules()
     fi
 }
 
+check_fw()
+{
+    iptables -t mangle -nL vpnc_wireguard >/dev/null 2>&1
+}
+
 stop_fw()
 {
     ipt_remove_rule(){ while iptables -t $1 -C $2 2>/dev/null; do iptables -t $1 -D $2; done }
@@ -461,7 +474,7 @@ EOF
 
 case $1 in
     start)
-        start_wg
+        start_wg || exit 1
     ;;
 
     stop)
@@ -470,7 +483,7 @@ case $1 in
 
     restart)
         stop_wg
-        start_wg
+        start_wg || exit 1
     ;;
 
     update)
@@ -479,18 +492,6 @@ case $1 in
 
     reload)
         reload_wg
-    ;;
-
-    connected)
-        check_connected || exit 1
-    ;;
-
-    reconnect)
-        reconnect_wg || exit 1
-    ;;
-
-    handshake)
-        get_latest_handshake || exit 1
     ;;
 esac
 

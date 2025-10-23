@@ -1269,9 +1269,6 @@ handle_notifications(void)
 		else if (strcmp(entry->d_name, RCN_RESTART_ZAPRET) == 0)
 		{
 			restart_zapret();
-#if defined(APP_WIREGUARD)
-			update_wireguard_client();
-#endif
 		}
 #endif
 #if defined(APP_TOR)
