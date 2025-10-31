@@ -170,7 +170,7 @@ prevent_access_loss()
 add_default_route()
 {
     ip rule add fwmark $FWMARK table $TABLE pref $PREF_WG
-    ip route add default dev $IF_NAME table $TABLE \
+    ip route replace default dev $IF_NAME table $TABLE 2>/dev/null \
         && log "add default route dev $IF_NAME table $TABLE" \
         || log "unable to add default route dev $IF_NAME table $TABLE"
 }
@@ -185,8 +185,9 @@ add_route()
 
     # for local cloudflare warp support on the router
     # padavan does not support nat64
+
     ip addr show $IF_NAME | grep -q "inet6" \
-        && ip -6 route add default dev $IF_NAME metric 1024
+        && ip -6 route replace default dev $IF_NAME metric 1024 2>/dev/null
 
     prevent_access_loss
 }
@@ -295,6 +296,9 @@ start_wg()
 
 start_watchdog()
 {
+    local pid=$(cat "$PID_WATCHDOG")
+    local no_log
+
     log "connection watchdog timer started"
 
     if check_connection_status; then
@@ -303,8 +307,8 @@ start_watchdog()
         log "connection may be blocked: $PEER_ENDPOINT"
     fi
 
-    local no_log
     while is_started; do
+        [ "$pid" = "$(cat $PID_WATCHDOG 2>/dev/null)" ] || die
         if reconnect_wg $no_log; then
             no_log=
         else
@@ -313,9 +317,6 @@ start_watchdog()
         fi
         sleep 10
     done
-
-    log "connection watchdog timer stopped"
-    rm -f "$PID_WATCHDOG"
 }
 
 reload_wg()
@@ -386,7 +387,8 @@ ipset_load()
             | sed -E 's#^(.*)$#add '"$name"' \1#' \
             | ipset restore
     fi
-    [ $? -ne 0 ] && log "ipset '$name' failed to update"
+
+    [ $? -eq 0 ] || log "ipset '$name' failed to update"
 }
 
 ipset_create()
