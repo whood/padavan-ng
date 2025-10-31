@@ -397,11 +397,12 @@ ipset_create()
 
     [ -n "$IPSET" ] || return
 
-    ipset -N $DNSMASQ_IPSET nethash timeout 3600 2>/dev/null
+    ipset -q -N $DNSMASQ_IPSET nethash timeout 3600 \
+        && log "ipset '$DNSMASQ_IPSET' with timeout 3600 created successfully"
 
-    ipset_load "list" $VPN_REMOTE_IPSET $REMOTE_NETWORK_LIST
-    ipset_load "list" $VPN_EXCLUDE_IPSET $EXCLUDE_NETWORK_LIST
-    ipset_load "nv" $VPN_CLIENTS_IPSET $NV_CLIENTS_LIST
+    ipset_load "list" "$VPN_REMOTE_IPSET" "$REMOTE_NETWORK_LIST"
+    ipset_load "list" "$VPN_EXCLUDE_IPSET" "$EXCLUDE_NETWORK_LIST"
+    ipset_load "nv" "$VPN_CLIENTS_IPSET" "$NV_CLIENTS_LIST"
 
     local name
     for name in $NV_IPSET_LIST; do
