@@ -239,6 +239,7 @@ function change_vpnc_enabled() {
 		showhide_div('tab_vpnc_ssl', 0);
 		showhide_div('tbl_vpnc_route', 0);
 		textarea_ovpn_enabled(0);
+		showhide_div('tbl_vpnc_access_control', v);
 	}else{
 		change_vpnc_type();
 	}
