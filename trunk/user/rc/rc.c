@@ -1769,6 +1769,9 @@ main(int argc, char **argv)
 	else if (!strcmp(base, "restart_wan")) {
 		notify_rc("manual_wan_reconnect");
 	}
+	else if (!strcmp(base, "update_resolvconf")) {
+		update_resolvconf(0, 0);
+	}
 	else if (!strcmp(base, "restart_dns")) {
 		restart_dns();
 	}
