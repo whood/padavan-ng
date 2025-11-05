@@ -554,7 +554,13 @@
 #endif
 #if defined(APP_TOR)
 			{"tor_enable", "", NULL, EVM_RESTART_TOR|EVM_RESTART_DHCPD},
-			{"torconf.torrc", "File", NULL, EVM_RESTART_TOR|EVM_BLOCK_UNSAFE|EVM_RESTART_DHCPD},
+			{"torconf.torrc", "File", NULL, EVM_RELOAD_TOR|EVM_BLOCK_UNSAFE},
+			{"torconf.remote_network.list", "File", NULL, EVM_UPDATE_TOR},
+			{"tor_clients", "", NULL, FALSE},
+			{"tor_clients_allowed", "", NULL, EVM_UPDATE_TOR},
+			{"tor_ipset", "", NULL, FALSE},
+			{"tor_ipset_allowed", "", NULL, EVM_UPDATE_TOR},
+			{"tor_proxy_mode", "", NULL, EVM_UPDATE_TOR},
 #endif
 #if defined(APP_PRIVOXY)
 			{"privoxy_enable", "", NULL, EVM_RESTART_PRIVOXY},
@@ -997,7 +1003,9 @@
 		{EVM_RESTART_ZAPRET,		EVT_RESTART_ZAPRET,		RCN_RESTART_ZAPRET,	EVM_RESTART_FIREWALL},
 #endif
 #if defined(APP_TOR)
-		{EVM_RESTART_TOR,		EVT_RESTART_TOR,		RCN_RESTART_TOR,	EVM_RESTART_FIREWALL},
+		{EVM_RESTART_TOR,		EVT_RESTART_TOR,		RCN_RESTART_TOR,	EVM_RESTART_FIREWALL|EVM_RELOAD_TOR|EVM_UPDATE_TOR},
+		{EVM_RELOAD_TOR,		EVT_RELOAD_TOR,			RCN_RELOAD_TOR,		0},
+		{EVM_UPDATE_TOR,		EVT_UPDATE_TOR,			RCN_UPDATE_TOR,		0},
 #endif
 #if defined(APP_PRIVOXY)
 		{EVM_RESTART_PRIVOXY,		EVT_RESTART_PRIVOXY,		RCN_RESTART_PRIVOXY,	EVM_RESTART_FIREWALL},

@@ -11,7 +11,7 @@ unset OPT
 GEOIP_DIR="/usr/share/tor"
 CONFIG_DIR="/etc/storage/tor"
 CONFIG_FILE="$CONFIG_DIR/torrc"
-TOR_REMOTE_LIST="$CONFIG_DIR/tor_remote_network.list"
+TOR_REMOTE_LIST="$CONFIG_DIR/remote_network.list"
 TOR_NETWORK_IPV4="172.16.0.0/12"
 CONTROL_PORT=9051
 DNS_PORT=9053
@@ -24,13 +24,12 @@ NV_TOR_PROXY_MODE="$(nvram get tor_proxy_mode)"
 
 # get comma separated lists for nvram
 NV_TOR_CLIENTS="$(nvram get tor_clients_allowed | tr -s ' ,' '\n')"
-NV_IPSET_REMOTE="$(nvram get tor_ipset_remote_allowed | tr -s ' ,' '\n')"
+NV_IPSET_LIST="$(nvram get tor_ipset_allowed | tr -s ' ,' '\n')"
 
 TOR_IPSET_CLIENTS="tor.clients"
 TOR_IPSET_REMOTE="tor.remote"
 
-DNSMASQ_UNBLOCK_IPSET="unblock"
-DNSMASQ_TOR_IPSET="tor"
+DNSMASQ_IPSET="tor"
 
 LAN_IP=$(nvram get lan_ipaddr)
 [ "$LAN_IP" ] || LAN_IP="192.168.1.1"
@@ -82,18 +81,17 @@ func_create_config()
 SocksPort ${LAN_IP}:9050
 HTTPTunnelPort ${LAN_IP}:8181
 
-# custom Padavan firmware option to save RAM when the data directory is in RAM
+# custom Padavan firmware option: prevent microdescs saved in Datadirectory
 NotSaveMicrodescs 1
 
-KeepalivePeriod 60
-MaxCircuitDirtiness 600
-LongLivedPorts 80,443
+# TrackHostExits .
 NumEntryGuards 8
-MaxClientCircuitsPending 8
-ReducedConnectionPadding 1
-UseMicrodescriptors 1
+NewCircuitPeriod 15
+LongLivedPorts 80,443
+DormantCanceledByStartup 1
+MaxCircuitDirtiness 120
+KeepalivePeriod 60
 HiddenServiceStatistics 0
-
 ClientOnly 1
 ExitRelay 0
 ExitPolicy reject *:*
@@ -106,16 +104,13 @@ UseBridges 1
 ### https://bridges.torproject.org/bridges?transport=vanilla
 ### https://torscan-ru.ntc.party
 
-Bridge 62.133.60.208:9300 9002E01C0A23349E46B0C3F104FEFFFA53645762
-Bridge 152.53.252.143:9001 99E79C80A38FD7D79D5C047A2B5AFCEFA7D5EAAE
-Bridge 190.120.229.2:443 1EA7A6645619538D286FDBED7688AFA7F82E0A51
-Bridge 91.242.241.228:9003 9490B0B4EA0BE681D520763FC9DA62511348564F
-Bridge 94.105.96.105:9001 A975613110AB41484022E18D51E007AB55D0802E
-Bridge 88.80.135.68:443 750BA1F82CCFE611B8505620486ABCDFD524961A
-Bridge 156.246.18.209:443 0FAC4600D8579B2FAF639AFC8E095D1CB85CA13E
-Bridge 142.120.207.113:9001 DBC741AE96A5812E367BB86700BD787B3D5BB380
-Bridge 213.211.140.67:9001 678DC97B93C90C8C9C95226832CB389BF22A82FF
-Bridge 45.133.73.63:443 874DCE52C49B07D5FF806973942B916481803BC3
+Bridge 217.82.105.242:9001 294A5042FD0E72006C9AB83B5D4447EC31F76B3C
+Bridge 97.95.174.125:9001 3442F18139E4B6E3ABCB2598DF257909EB10699D
+Bridge 102.211.56.20:9001 0153A0723F39CA78F5B60735DEC4A84E0991C5FD
+Bridge 95.146.190.198:9001 66AAB03BDC3989805C986D97F9FDF29D7601D003
+Bridge 185.129.62.64:9001 141C317F74D92DA44FAA072F6BFD0C98DEFF9066
+Bridge 77.175.139.47:9001 0F47AC0E439D372ED2EF8E1967B5EB17F1FF66FC
+Bridge 151.145.83.219:9001 D3CB91F1497F50001D61454CC3F765EACAF9EA03
 EOF
     chmod 644 "$CONFIG_FILE"
 }
@@ -152,7 +147,8 @@ tor_waiting_bootstrap()
 
     echo "waiting bootstrapping..."
     while ! tor_ready && [ $loop -lt 60 ]; do
-        [ ! "$pid" = "$(cat $PID_FILE 2>/dev/null)" ] && die "terminating"
+        is_started || die
+        [ ! "$pid" = "$(cat $PID_FILE 2>/dev/null)" ] && die
         loop=$((loop+1))
         sleep 5
     done
@@ -253,23 +249,21 @@ fill_ipset()
             | ipset restore
     fi
 
-    [ $? -ne 0 ] && log "ipset '$name' failed to update"
+    [ $? -eq 0 ] || log "ipset '$name' failed to update"
 }
 
 create_ipset()
 {
-    # $1: if present - no fill
-
     [ -z "$IPSET" ] && return
 
-    ipset -q -N $DNSMASQ_UNBLOCK_IPSET nethash timeout 3600
-    ipset -q -N $DNSMASQ_TOR_IPSET nethash timeout 3600
+    ipset -q -N $DNSMASQ_IPSET nethash timeout 21600 \
+        && log "ipset '$DNSMASQ_IPSET' with timeout 21600 created successfully"
 
     fill_ipset "nv" "$TOR_IPSET_CLIENTS" "$NV_TOR_CLIENTS"
     fill_ipset "list" "$TOR_IPSET_REMOTE" "$TOR_REMOTE_LIST"
 
     local name
-    for name in $NV_IPSET_REMOTE; do
+    for name in $NV_IPSET_LIST; do
         ipset -q -N $name nethash \
             && log "ipset '$name' created successfully"
     done
@@ -288,36 +282,33 @@ stop_redirect()
     ipt_remove_chain "raw" "tor_mark"
 }
 
-make_exclude_rules()
+make_rules()
 {
     local i
+
+    if [ -n "$NV_TOR_CLIENTS" ]; then
+        if [ -n "$IPSET" ]; then
+            echo "-A tor_proxy -m set --match-set $TOR_IPSET_CLIENTS src -j tor_remote"
+        else
+            for i in $NV_TOR_CLIENTS; do
+                echo "-A tor_proxy -s $i -j tor_remote"
+            done
+        fi
+    else
+        echo "-A tor_proxy -j tor_remote"
+    fi
 
     for i in \
         0.0.0.0/8 127.0.0.0/8 169.254.0.0/16 \
         224.0.0.0/4 240.0.0.0/4 \
         10.0.0.0/8 192.168.0.0/16
     do
-        [ -n "$i" ] && echo "-A tor_remote -d $i -j RETURN"
+        echo "-A tor_remote -d $i -j RETURN"
     done
-}
-
-make_rules()
-{
-    local i
-
-    if [ -n "$IPSET" ]; then
-        echo "-A tor_proxy -m set --match-set $TOR_IPSET_CLIENTS src -j tor_remote"
-    else
-        for i in $NV_TOR_CLIENTS; do
-            echo "-A tor_proxy -s $i -j tor_remote"
-        done
-    fi
-
-    make_exclude_rules
 
     if [ "$NV_TOR_PROXY_MODE" = "1" ]; then
         if [ -n "$IPSET" ]; then
-            for i in $TOR_IPSET_REMOTE $NV_IPSET_REMOTE; do
+            for i in $TOR_IPSET_REMOTE $NV_IPSET_LIST; do
                 echo "-A tor_remote -m set --match-set $i dst -j tor_mark"
             done
         else
@@ -340,9 +331,8 @@ start_redirect()
 
     create_ipset
 
-    local res
     # using the raw table due to a very old kernel
-    res=$(iptables-restore -n 2>&1 <<EOF
+    iptables-restore -n <<EOF
 *nat
 -A PREROUTING -p tcp -m mark --mark $TRANS_PORT -j REDIRECT --to-ports $TRANS_PORT
 COMMIT
@@ -356,13 +346,7 @@ $(make_rules)
 -A tor_mark -j MARK --set-mark $TRANS_PORT
 COMMIT
 EOF
-    )
-
-    if [ "$?" -eq 0 ]; then
-        log "firewall rules updated"
-    else
-        error "firewall rules failed to update: $(echo "$res" | head -n1 | cut -d':' -f2-)"
-    fi
+    [ $? -eq 0 ] || error "firewall rules update failed"
 }
 
 
@@ -381,7 +365,7 @@ case "$1" in
     ;;
 
     reload)
-        reload_tor "$2"
+        reload_tor
     ;;
 
     update)
@@ -393,7 +377,7 @@ case "$1" in
     ;;
 
     control)
-        tor_control
+        tor_control "$2"
     ;;
 
     config|create-config)
@@ -401,7 +385,7 @@ case "$1" in
     ;;
 
     *)
-        echo "Usage: $0 {start|stop|restart|reload|update|status|create-config}"
+        echo "Usage: $0 {start|stop|restart|reload|update|status|create-config|control <command>}"
         exit 1
     ;;
 esac

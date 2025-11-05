@@ -88,35 +88,8 @@ function initial(){
 	}
 	change_crond_enabled();
 	
-	if(found_app_tor() || found_app_privoxy() || found_app_dnscrypt() || found_app_zapret() || found_app_doh() || found_app_stubby()){
+	if (found_app_tor() || found_app_privoxy()) {
 		showhide_div('tbl_anon', 1);
-	}
-
-	if(!found_app_doh()){
-		showhide_div('row_doh', 0);
-		showhide_div('row_doh_conf1', 0);
-		showhide_div('row_doh_conf2', 0);
-		showhide_div('row_doh_conf3', 0);
-	}else{
-		loadJSONToSelect('/doh.json', 'doh_server_list');
-		change_doh_enabled();
-	}
-
-	if(!found_app_stubby()){
-		showhide_div('row_stubby', 0);
-		showhide_div('row_stubby_conf1', 0);
-		showhide_div('row_stubby_conf2', 0);
-		showhide_div('row_stubby_conf3', 0);
-	}else{
-		loadJSONToSelect('/dot.json', 'stubby_server_list');
-		change_stubby_enabled();
-	}
-
-	if(!found_app_zapret()){
-		showhide_div('row_zapret', 0);
-		showhide_div('row_zapret_service', 0);
-	}else{
-		change_zapret_enabled();
 	}
 
 	if(!found_app_tor()){
@@ -133,70 +106,40 @@ function initial(){
 		showhide_div('row_privoxy_trust', 0);
 	}else
 		change_privoxy_enabled();
-		
-	if(!found_app_dnscrypt()){
-		showhide_div('row_dnscrypt', 0);
-		showhide_div('row_dnscrypt_resolver', 0);
-		showhide_div('row_dnscrypt_ipaddr', 0);
-		showhide_div('row_dnscrypt_port', 0);
-		showhide_div('row_dnscrypt_force_dns', 0);
-		showhide_div('row_dnscrypt_options', 0);
-	} else {
+
+	if (found_app_dnscrypt()) {
+		showhide_div('tbl_dnscrypt', 1);
 		loadCSVToSelect();
 		change_dnscrypt_enabled();
+	}
+
+	if (found_app_doh()) {
+		showhide_div('tbl_doh', 1);
+		loadJSONToSelect('/doh.json', 'doh_server_list');
+		change_doh_enabled();
+	}
+
+	if (found_app_stubby()) {
+		showhide_div('tbl_dot', 1);
+		loadJSONToSelect('/dot.json', 'stubby_server_list');
+		change_stubby_enabled();
+	}
+
+	if (found_app_zapret()) {
+		showhide_div('tbl_zapret', 1);
+		change_zapret_enabled();
 	}
 }
 
 function applyRule(){
 	if(validForm()){
 		showLoading();
-		
+
 		document.form.action_mode.value = " Apply ";
 		document.form.current_page.value = "/Advanced_Services_Content.asp";
 		document.form.next_page.value = "";
-		
+
 		document.form.submit();
-	}
-
-	if(!found_app_doh()){
-		showhide_div('row_doh', 0);
-		showhide_div('row_doh_conf1', 0);
-		showhide_div('row_doh_conf2', 0);
-		showhide_div('row_doh_conf3', 0);
-	}
-
-	if(!found_app_stubby()){
-		showhide_div('row_stubby', 0);
-		showhide_div('row_stubby_conf1', 0);
-		showhide_div('row_stubby_conf2', 0);
-		showhide_div('row_stubby_conf3', 0);
-	}
-
-	if(!found_app_zapret()){
-		showhide_div('row_zapret', 0);
-		showhide_div('row_zapret_service', 0);
-	}
-
-	if(!found_app_tor()){
-		showhide_div('row_tor', 0);
-		showhide_div('row_tor_conf', 0);
-	}
-
-	if(!found_app_privoxy()){
-		showhide_div('row_privoxy', 0);
-		showhide_div('row_privoxy_conf', 0);
-		showhide_div('row_privoxy_action', 0);
-		showhide_div('row_privoxy_filter', 0);
-		showhide_div('row_privoxy_trust', 0);
-	}
-
-	if(!found_app_dnscrypt()){
-		showhide_div('row_dnscrypt', 0);
-		showhide_div('row_dnscrypt_resolver', 0);
-		showhide_div('row_dnscrypt_ipaddr', 0);
-		showhide_div('row_dnscrypt_port', 0);
-		showhide_div('row_dnscrypt_force_dns', 0);
-		showhide_div('row_dnscrypt_options', 0);
 	}
 }
 
@@ -492,27 +435,108 @@ function restoreZapret(){
 	sendSystemCmd(cmd, true);
 }
 
-function restoreTor(){
-	if (!login_safe())
-		return false;
-
-	if(!confirm('<#TorRestoreConfirm#>'))
-		return false;
-
-	var cmd
-	cmd = 'rm -f /etc/storage/tor/torrc;';
-	cmd += 'tor.sh config;';
-	cmd += 'mtd_storage.sh save';
-
-	sendSystemCmd(cmd, true);
-}
-
 function change_tor_enabled(){
 	var v = document.form.tor_enable[0].checked;
 	showhide_div('row_tor_conf', v);
+	showhide_div('row_dipset', found_support_ipset());
+	showhide_div('row_tor_ipset', found_support_ipset());
+	tor_proxy_change()
 	if (!login_safe())
 		v = 0;
 	textarea_tor_enabled(v);
+
+	let allowed_list, items_list, allowed, items;
+
+	allowed_list = "<% nvram_get_x("", "tor_clients_allowed"); %>";
+	items_list = "<% nvram_get_x("", "tor_clients"); %>";
+
+	allowed = allowed_list.replace(/\s+/g, '').split(',')
+		.filter(Boolean)
+		.map(item => item);
+	items = items_list.replace(/\s+/g, '').split(',')
+		.filter(Boolean)
+		.filter(ip => !allowed.includes(ip))
+		.map(item => item);
+
+	const data_clients = [
+		...allowed.map(item => ( {text: item, checked: true } )),
+		...items.map(item => ( {text: item, checked: false } )),
+		...ipmonitor
+			.filter(ip => ip[0])
+			.filter(ip => !allowed.includes(ip[0]))
+			.filter(ip => !items.includes(ip[0]))
+			.map(item => ( {text: item[0], title: item[2].slice(0,10), checked: false } )),
+	];
+
+	$j('#tor_clients_list').multiSelectDropdown({
+		items: data_clients,
+		placeholder: "<#ZapretWORestrictions#>",
+		width: '220px',
+		allowDelete: true,
+		allowAdd: true,
+		addSuggestionText: '<#CTL_add#>',
+		removeSpaces: true,
+		allowedItems: '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/([0-9]|[1-2][0-9]|3[0-2]))?$',
+		allowedAlert: '<#LANHostConfig_x_DDNS_alarm_9#>',
+		onChange: function(selected){
+			document.form.tor_clients_allowed.value = selected.join(',');
+			document.form.tor_clients.value = this.multiSelectDropdown('getAllItems')
+				.filter(item => !item.title)
+				.map(item => item.text)
+				.join(',');
+		}
+	});
+
+	if (!found_support_ipset())
+		return;
+
+	allowed_list = "<% nvram_get_x("", "tor_ipset_allowed"); %>";
+	added_list = "<% nvram_get_x("", "tor_ipset"); %>";
+
+	allowed = allowed_list.replace(/\s+/g, '').split(',')
+		.filter(Boolean)
+		.map(item => item);
+	added = added_list.replace(/\s+/g, '').split(',')
+		.filter(Boolean)
+		.filter(item => !allowed.includes(item))
+		.map(item => ( {text: item, checked: false } ));
+
+	const ipset = [
+		...allowed.map(item => ({text: item, checked: true })),
+		...added
+	];
+
+	$j('#tor_ipset').multiSelectDropdown({
+		items: ipset,
+		placeholder: "<#Select_menu_default#>",
+		width: '220px',
+		allowDelete: true,
+		allowAdd: true,
+		addSuggestionText: '<#CTL_add#>',
+		removeSpaces: true,
+		allowedItems: '^[a-zA-Z0-9-_.]+$',
+		allowedAlert: '<#JS_field_noletter#>',
+		onChange: function(selected){
+			document.form.tor_ipset_allowed.value = selected.join(',');
+			document.form.tor_ipset.value = this.multiSelectDropdown('getAllItems')
+				.map(item => item.text)
+				.join(',');
+		}
+	});
+}
+
+function tor_proxy_change(){
+	var proto = document.form.tor_proxy_mode.value;
+	var v1 = (proto == "1") ? 1 : 0;
+	var v2 = (proto == "2") ? 1 : 0;
+
+	showhide_div('tor_clients', v1 || v2);
+	showhide_div('tor_remote', v1);
+
+        if (found_support_ipset()) {
+		showhide_div('row_tor_ipset', v1);
+		showhide_div('row_dipset', v1);
+	}
 }
 
 function change_privoxy_enabled(){
@@ -885,6 +909,7 @@ function fillDNSCryptSelect(values) {
                                         <tr>
                                             <th colspan="2" style="background-color: #E3E3E3;"><#Adm_System_anon#></th>
                                         </tr>
+
                                         <tr id="row_tor">
                                             <th width="50%"><#Adm_Svc_tor#></th>
                                             <td>
@@ -899,17 +924,64 @@ function fillDNSCryptSelect(values) {
                                                 </div>
                                             </td>
                                         </tr>
-					<tr id="row_tor_conf" style="display:none">
-					    <td colspan="2">
-						<a href="javascript:spoiler_toggle('spoiler_tor_conf')"><span><#CustomConf#> "torrc"</span> <i style="scale: 75%;" class="icon-chevron-down"></i></a>
-						<span style="float: right; width: 102px">
-							<input type="button" class="btn btn-mini btn-danger" style="outline:0" onclick="restoreTor();" value="<#CTL_restore#>"/>
-						</span>
-						<div id="spoiler_tor_conf" style="display:none; padding-top: 8px;">
-							<textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" name="torconf.torrc" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("torconf.torrc",""); %></textarea>
-						</div>
-					    </td>
-					</tr>
+
+                                        <tr id="row_tor_conf" style="display:none">
+                                            <td colspan="2" style="padding: 0; border: 0;">
+                                                <table height="100%" width="100%" cellpadding="0" cellspacing="0" class="table" style="border: 0px; margin: 0px;">
+                                                    <tr>
+                                                    <tr>
+                                                        <th width="50%"><#Adm_Svc_TorTransparent#>:</th>
+                                                        <td>
+                                                            <select name="tor_proxy_mode" class="input" onchange="tor_proxy_change();">
+                                                                <option value="0" <% nvram_match_x("", "tor_proxy_mode", "0","selected"); %>><#CTL_Disabled#></option>
+                                                                <option value="1" <% nvram_match_x("", "tor_proxy_mode", "1","selected"); %>><#Adm_Svc_TorSelRemote#></option>
+                                                                <option value="2" <% nvram_match_x("", "tor_proxy_mode", "2","selected"); %>><#Adm_Svc_TorAllRemote#></option>
+                                                            </select>
+                                                        </td>
+                                                    </tr>
+                                                    <tr id="tor_clients">
+                                                        <th width="50%"><#Adm_Svc_TorListUsers#>:</th>
+                                                        <td>
+                                                            <span id="tor_clients_list"></span>
+                                                            <input type="hidden" name="tor_clients" value="<% nvram_get_x("", "tor_clients"); %>">
+                                                            <input type="hidden" name="tor_clients_allowed" value="<% nvram_get_x("", "tor_clients_allowed"); %>">
+                                                        </td>
+                                                    </tr>
+                                                    <tr id="row_tor_ipset">
+                                                        <th width="50%"><#Adm_Svc_TorListIpset#>:</th>
+                                                        <td>
+                                                            <span id="tor_ipset"></span>
+                                                            <input type="hidden" name="tor_ipset" value="<% nvram_get_x("", "tor_ipset"); %>">
+                                                            <input type="hidden" name="tor_ipset_allowed" value="<% nvram_get_x("", "tor_ipset_allowed"); %>">
+                                                        </td>
+                                                    </tr>
+                                                    <tr id="tor_remote">
+                                                        <td colspan="2">
+                                                            <a href="javascript:spoiler_toggle('spoiler_tor_remote')"><span><#Adm_Svc_TorListRemote#>:</span> <i style="scale: 75%;" class="icon-chevron-down"></i></a>
+                                                            <div id="spoiler_tor_remote" style="display:none; padding-top: 8px;">
+                                                                <textarea rows="16" wrap="off" spellcheck="false" maxlength="16384" class="span12" name="torconf.remote_network.list" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("torconf.remote_network.list",""); %></textarea>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr id="row_dipset">
+                                                        <td colspan="2">
+                                                            <a href="javascript:spoiler_toggle('spoiler_dipset')"><span><#CustomConf#> "dnsmasq.ipset"</span> <i style="scale: 75%;" class="icon-chevron-down"></i></a>
+                                                            <div id="spoiler_dipset" style="display:none;">
+                                                                <textarea rows="16" wrap="off" spellcheck="false" maxlength="16384" class="span12" name="dnsmasq.dnsmasq.ipset" style="resize: vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("dnsmasq.dnsmasq.ipset",""); %></textarea>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="2">
+                                                            <a href="javascript:spoiler_toggle('spoiler_tor_conf')"><span><#CustomConf#> "torrc"</span> <i style="scale: 75%;" class="icon-chevron-down"></i></a>
+                                                            <div id="spoiler_tor_conf" style="display:none; padding-top: 8px;">
+                                                                <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" name="torconf.torrc" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("torconf.torrc",""); %></textarea>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
 
                                         <tr id="row_privoxy">
                                             <th width="50%"><#Adm_Svc_privoxy#></th>
@@ -925,39 +997,44 @@ function fillDNSCryptSelect(values) {
                                                 </div>
                                             </td>
                                         </tr>
-					<tr id="row_privoxy_conf" style="display:none">
-					    <td colspan="2">
-						<a href="javascript:spoiler_toggle('spoiler_privoxy_conf')"><span><#CustomConf#> "config"</span></a>
-						    <div id="spoiler_privoxy_conf" style="display:none;">
-							<textarea rows="16" wrap="off" spellcheck="false" maxlength="65536" class="span12" name="privoxy.config" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.config",""); %></textarea>
-						    </div>
-					    </td>
-					</tr>
-					<tr id="row_privoxy_action" style="display:none">
-					    <td colspan="2">
-						<a href="javascript:spoiler_toggle('spoiler_privoxy_action')"><span><#CustomConf#> "user.action"</span></a>
-						    <div id="spoiler_privoxy_action" style="display:none;">
-							<textarea rows="16" wrap="off" spellcheck="false" maxlength="65536" class="span12" name="privoxy.user.action" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.action",""); %></textarea>
-						    </div>
-					    </td>
-					</tr>
-					<tr id="row_privoxy_filter" style="display:none">
-					    <td colspan="2">
-						<a href="javascript:spoiler_toggle('spoiler_privoxy_filter')"><span><#CustomConf#> "user.filter"</span></a>
-						    <div id="spoiler_privoxy_filter" style="display:none;">
-							<textarea rows="16" wrap="off" spellcheck="false" maxlength="65536" class="span12" name="privoxy.user.filter" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.filter",""); %></textarea>
-						    </div>
-					    </td>
-					</tr>
-					<tr id="row_privoxy_trust" style="display:none">
-					    <td colspan="2">
-						<a href="javascript:spoiler_toggle('spoiler_privoxy_trust')"><span><#CustomConf#> "user.trust"</span></a>
-						    <div id="spoiler_privoxy_trust" style="display:none;">
-							<textarea rows="16" wrap="off" spellcheck="false" maxlength="65536" class="span12" name="privoxy.user.trust" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.trust",""); %></textarea>
-						    </div>
-					    </td>
-					</tr>
+                                        <tr id="row_privoxy_conf" style="display:none">
+                                            <td colspan="2">
+                                                <a href="javascript:spoiler_toggle('spoiler_privoxy_conf')"><span><#CustomConf#> "config"</span></a>
+                                                <div id="spoiler_privoxy_conf" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="privoxy.config" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.config",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="row_privoxy_action" style="display:none">
+                                            <td colspan="2">
+                                                <a href="javascript:spoiler_toggle('spoiler_privoxy_action')"><span><#CustomConf#> "user.action"</span></a>
+                                                <div id="spoiler_privoxy_action" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="privoxy.user.action" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.action",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="row_privoxy_filter" style="display:none">
+                                            <td colspan="2">
+                                                <a href="javascript:spoiler_toggle('spoiler_privoxy_filter')"><span><#CustomConf#> "user.filter"</span></a>
+                                                <div id="spoiler_privoxy_filter" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="privoxy.user.filter" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.filter",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="row_privoxy_trust" style="display:none">
+                                            <td colspan="2">
+                                                <a href="javascript:spoiler_toggle('spoiler_privoxy_trust')"><span><#CustomConf#> "user.trust"</span></a>
+                                                <div id="spoiler_privoxy_trust" style="display:none;">
+                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="privoxy.user.trust" style="font-family:'Courier New'; font-size:12px; resize:vertical;"><% nvram_dump("privoxy.user.trust",""); %></textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
 
+                                    <table width="100%" cellpadding="4" cellspacing="0" class="table" id="tbl_dnscrypt" style="display:none">
+                                        <tr>
+                                            <th colspan="2" style="background-color: #E3E3E3;">Dnscrypt</th>
+                                        </tr>
                                         <tr id="row_dnscrypt">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 1);"><#Adm_Svc_dnscrypt#></a></th>
                                             <td>
@@ -972,34 +1049,34 @@ function fillDNSCryptSelect(values) {
                                                 </div>
                                             </td>
                                         </tr>
-					<tr id="row_dnscrypt_resolver" style="display:none">
+                                        <tr id="row_dnscrypt_resolver" style="display:none">
                                             <th><#Adm_Svc_dnscrypt_resolver#></th>
                                             <td>
                                                 <select name="dnscrypt_resolver" class="input"></select>
                                                 &nbsp;<a href="dnscrypt-resolvers.csv" target="_blank" class="label label-info"><span><#Adm_Svc_dnscrypt_list#></span></a>
                                             </td>
-					</tr>
-					<tr id="row_dnscrypt_ipaddr" style="display:none">
+                                        </tr>
+                                        <tr id="row_dnscrypt_ipaddr" style="display:none">
                                             <th><#Adm_Svc_dnscrypt_ipaddr#></th>
                                             <td>
-						<select name="dnscrypt_ipaddr" class="input">
-						    <option value="127.0.0.1" <% nvram_match_x("", "dnscrypt_ipaddr", "127.0.0.1","selected"); %>>127.0.0.1 (*)</option>
-						    <option id="localip" value="<% nvram_get_x("", "lan_ipaddr"); %>"><% nvram_get_x("", "lan_ipaddr"); %></option>
-						    <option value="0.0.0.0" <% nvram_match_x("", "dnscrypt_ipaddr", "0.0.0.0","selected"); %>><#Adm_Svc_dnscrypt_all#></option>
-							<script type="text/javascript">
-							    if("<% nvram_get_x("", "lan_ipaddr"); %>"=="<% nvram_get_x("", "dnscrypt_ipaddr"); %>")
-							    lip=document.getElementById("localip").selected="selected";
-							</script>
-						</select>
+                                                <select name="dnscrypt_ipaddr" class="input">
+                                                    <option value="127.0.0.1" <% nvram_match_x("", "dnscrypt_ipaddr", "127.0.0.1","selected"); %>>127.0.0.1 (*)</option>
+                                                    <option id="localip" value="<% nvram_get_x("", "lan_ipaddr"); %>"><% nvram_get_x("", "lan_ipaddr"); %></option>
+                                                    <option value="0.0.0.0" <% nvram_match_x("", "dnscrypt_ipaddr", "0.0.0.0","selected"); %>><#Adm_Svc_dnscrypt_all#></option>
+                                                    <script type="text/javascript">
+                                                        if("<% nvram_get_x("", "lan_ipaddr"); %>"=="<% nvram_get_x("", "dnscrypt_ipaddr"); %>")
+                                                        lip=document.getElementById("localip").selected="selected";
+                                                    </script>
+                                                </select>
                                             </td>
-					</tr>
-					<tr id="row_dnscrypt_port" style="display:none">
-					    <th><#Adm_Svc_dnscrypt_port#></th>
+                                        </tr>
+                                        <tr id="row_dnscrypt_port" style="display:none">
+                                            <th><#Adm_Svc_dnscrypt_port#></th>
                                             <td>
                                                 <input type="text" maxlength="5" size="15" name="dnscrypt_port" class="input" value="<% nvram_get_x("", "dnscrypt_port"); %>" onkeypress="return is_ipaddrport(this,event);"/>
                                                 &nbsp;<span style="color:#888;">[53..65535]</span>
                                             </td>
-					</tr>
+                                        </tr>
                                         <tr id="row_dnscrypt_force_dns" style="display:none;">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 2);"><#Adm_Svc_dnscrypt_force_dns#></a></th>
                                             <td>
@@ -1009,14 +1086,18 @@ function fillDNSCryptSelect(values) {
                                                 </select>
                                             </td>
                                         </tr>
-					<tr id="row_dnscrypt_options" style="display:none">
+                                        <tr id="row_dnscrypt_options" style="display:none">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 3);"><#Adm_Svc_dnscrypt_options#></a></th>
                                             <td>
                                                 <input type="text" maxlength="128" size="15" name="dnscrypt_options" class="input" value="<% nvram_get_x("", "dnscrypt_options"); %>" onkeypress="return is_string(this,event);"/>
                                             </td>
-					</tr>
+                                        </tr>
+                                    </table>
 
-
+                                    <table width="100%" cellpadding="4" cellspacing="0" class="table" id="tbl_doh" style="display:none">
+                                        <tr>
+                                            <th colspan="2" style="background-color: #E3E3E3;">DNS-over-HTTPS</th>
+                                        </tr>
                                         <tr id="row_doh">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 5);"><#Adm_Svc_doh#></a></th>
                                             <td>
@@ -1058,7 +1139,12 @@ function fillDNSCryptSelect(values) {
                                                 <input type="button" class="btn btn-mini" style="outline:0" onclick="doh_clean(3);" value="<#CTL_clear#>"/>
                                             </td>
                                         </tr>
+                                    </table>
 
+                                    <table width="100%" cellpadding="4" cellspacing="0" class="table" id="tbl_dot" style="display:none">
+                                        <tr>
+                                            <th colspan="2" style="background-color: #E3E3E3;">DNS-over-TLS</th>
+                                        </tr>
                                         <tr id="row_stubby">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 6);"><#Adm_Svc_stubby#></a></th>
                                             <td>
@@ -1100,7 +1186,12 @@ function fillDNSCryptSelect(values) {
                                                 <input type="button" class="btn btn-mini" style="outline:0" onclick="stubby_clean(3);" value="<#CTL_clear#>"/>
                                             </td>
                                         </tr>
+                                    </table>
 
+                                    <table width="100%" cellpadding="4" cellspacing="0" class="table" id="tbl_zapret" style="display:none">
+                                        <tr>
+                                            <th colspan="2" style="background-color: #E3E3E3;"><#Adm_System_Zapret#></th>
+                                        </tr>
                                         <tr id="row_zapret">
                                             <th width="50%"><a class="help_tooltip" href="javascript:void(0);" onmouseover="openTooltip(this, 25, 4);"><#Adm_Svc_zapret#></a></th>
                                             <td>
@@ -1163,17 +1254,17 @@ function fillDNSCryptSelect(values) {
                                                         <tr>
                                                             <td id="zapret.strategy" colspan="2" style="padding-top: 0px; border-top: 0 none; display:none;">
                                                                 <div id="zapret_strategy_textarea">
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy" name="zapretc.strategy" style="resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy0" name="zapretc.strategy0" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy0",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy1" name="zapretc.strategy1" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy1",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy2" name="zapretc.strategy2" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy2",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy3" name="zapretc.strategy3" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy3",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy4" name="zapretc.strategy4" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy4",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy5" name="zapretc.strategy5" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy5",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy6" name="zapretc.strategy6" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy6",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy7" name="zapretc.strategy7" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy7",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy8" name="zapretc.strategy8" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy8",""); %></textarea>
-                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" id="zapretc.strategy9" name="zapretc.strategy9" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy9",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy" name="zapretc.strategy" style="resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy0" name="zapretc.strategy0" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy0",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy1" name="zapretc.strategy1" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy1",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy2" name="zapretc.strategy2" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy2",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy3" name="zapretc.strategy3" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy3",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy4" name="zapretc.strategy4" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy4",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy5" name="zapretc.strategy5" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy5",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy6" name="zapretc.strategy6" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy6",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy7" name="zapretc.strategy7" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy7",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy8" name="zapretc.strategy8" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy8",""); %></textarea>
+                                                                    <textarea rows="16" wrap="off" spellcheck="false" maxlength="4096" class="span12" id="zapretc.strategy9" name="zapretc.strategy9" style="display:none; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.strategy9",""); %></textarea>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -1199,10 +1290,10 @@ function fillDNSCryptSelect(values) {
                                                                             <textarea rows="16" wrap="off" spellcheck="false" maxlength="32768" class="span12" name="zapretc.user.list" style="height: 100%; margin-bottom: 0px; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.user.list",""); %></textarea>
                                                                         </td>
                                                                         <td style="border:0px; width: 33%; padding: 0px; padding-left: 3px; padding-right: 3px; vertical-align: top;">
-                                                                            <textarea rows="16" wrap="off" spellcheck="false" maxlength="32768" class="span12" name="zapretc.auto.list" style="height: 100%; margin-bottom: 0px; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.auto.list",""); %></textarea>
+                                                                            <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="zapretc.auto.list" style="height: 100%; margin-bottom: 0px; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.auto.list",""); %></textarea>
                                                                         </td>
                                                                         <td style="border:0px; width: 33%; padding: 0px; padding-left: 5px; vertical-align: top;">
-                                                                            <textarea rows="16" wrap="off" spellcheck="false" maxlength="32768" class="span12" name="zapretc.exclude.list" style="height: 100%; margin-bottom: 0px; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.exclude.list",""); %></textarea>
+                                                                            <textarea rows="16" wrap="off" spellcheck="false" maxlength="8192" class="span12" name="zapretc.exclude.list" style="height: 100%; margin-bottom: 0px; resize:vertical; font-family:'Courier New'; font-size:12px;"><% nvram_dump("zapretc.exclude.list",""); %></textarea>
                                                                         </td>
                                                                     </tr>
                                                                 </table>
@@ -1221,6 +1312,7 @@ function fillDNSCryptSelect(values) {
                                             </td>
                                         </tr>
                                     </table>
+
                                     <table width="100%" cellpadding="4" cellspacing="0" class="table">
                                         <tr>
                                             <th colspan="2" style="background-color: #E3E3E3;"><#Adm_System_misc#></th>

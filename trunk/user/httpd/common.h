@@ -93,6 +93,8 @@ typedef u_int8_t u8;
 #define EVM_RESTART_DOH			(1ULL << 48)
 #define EVM_RESTART_STUBBY		(1ULL << 49)
 #define EVM_REAPPLY_VPNCLI		(1ULL << 50)
+#define EVM_UPDATE_TOR			(1ULL << 51)
+#define EVM_RELOAD_TOR			(1ULL << 52)
 
 #define EVM_RESTART_REBOOT		(1ULL << 62)
 #define EVM_BLOCK_UNSAFE		(1ULL << 63) /* special case */
@@ -148,7 +150,9 @@ typedef u_int8_t u8;
 #define EVT_RESTART_ZAPRET		1
 #define EVT_RESTART_DOH			1
 #define EVT_RESTART_STUBBY		1
-#define EVT_RESTART_TOR			1
+#define EVT_RESTART_TOR			2
+#define EVT_RELOAD_TOR			1
+#define EVT_UPDATE_TOR			1
 #define EVT_RESTART_PRIVOXY		1
 #define EVT_RESTART_DNSCRYPT		1
 #define EVT_RESTART_ZRAM		1

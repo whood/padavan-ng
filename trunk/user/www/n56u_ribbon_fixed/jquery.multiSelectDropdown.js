@@ -187,7 +187,6 @@
 
             if(!val) return;
 
-            // Проверка по регулярному выражению
             if (settings.allowedItems) {
               const regex = new RegExp(settings.allowedItems);
               if (!regex.test(val)) {

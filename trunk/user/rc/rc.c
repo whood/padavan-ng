@@ -1276,6 +1276,14 @@ handle_notifications(void)
 		{
 			restart_tor();
 		}
+		else if (strcmp(entry->d_name, RCN_RELOAD_TOR) == 0)
+		{
+			reload_tor();
+		}
+		else if (strcmp(entry->d_name, RCN_UPDATE_TOR) == 0)
+		{
+			update_tor();
+		}
 #endif
 #if defined(APP_PRIVOXY)
 		else if (strcmp(entry->d_name, RCN_RESTART_PRIVOXY) == 0)
