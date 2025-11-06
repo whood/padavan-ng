@@ -1,7 +1,7 @@
 # https://curl.se
 
-SRC_NAME = curl-8.16.0
-SRC_URL = https://github.com/curl/curl/releases/download/curl-8_16_0/$(SRC_NAME).tar.xz
+SRC_NAME = curl-8.17.0
+SRC_URL = https://github.com/curl/curl/releases/download/curl-8_17_0/$(SRC_NAME).tar.xz
 
 CPPFLAGS += $(CFLAGS)
 
