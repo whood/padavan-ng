@@ -395,7 +395,7 @@ function change_zapret_enabled(){
 			.filter(ip => ip[0])
 			.filter(ip => !allowed.includes(ip[0]))
 			.filter(ip => !items.includes(ip[0]))
-			.map(item => ( {text: item[0], title: item[2].slice(0,10), checked: false } )),
+			.map(item => ( {text: item[0], title: item[2]?.slice(0, 10) ?? '*', checked: false } )),
 	];
 
 	$j('#zapret_clients_list').multiSelectDropdown({
@@ -465,7 +465,7 @@ function change_tor_enabled(){
 			.filter(ip => ip[0])
 			.filter(ip => !allowed.includes(ip[0]))
 			.filter(ip => !items.includes(ip[0]))
-			.map(item => ( {text: item[0], title: item[2].slice(0,10), checked: false } )),
+			.map(item => ( {text: item[0], title: item[2]?.slice(0, 10) ?? '*', checked: false } )),
 	];
 
 	$j('#tor_clients_list').multiSelectDropdown({

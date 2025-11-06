@@ -678,7 +678,7 @@ function vpnc_access_control() {
 			.filter(ip => ip[0])
 			.filter(ip => !allowed.includes(ip[0]))
 			.filter(ip => !added.includes(ip[0]))
-			.map(item => ( {text: item[0], title: item[2], checked: false } )),
+			.map(item => ( {text: item[0], title: item[2] ?? '*', checked: false } )),
 	];
 
 	$j('#vpnc_clients').multiSelectDropdown({
