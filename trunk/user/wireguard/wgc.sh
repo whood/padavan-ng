@@ -20,6 +20,7 @@ PEER_PUBLIC="$(nvram get vpnc_wg_peer_public)"
 PEER_PORT="$(nvram get vpnc_wg_peer_port)"
 PEER_ENDPOINT="$(nvram get vpnc_wg_peer_endpoint)${PEER_PORT:+":$PEER_PORT"}"
 PEER_KEEPALIVE="$(nvram get vpnc_wg_peer_keepalive)"
+[ -n "$PEER_KEEPALIVE" ] || PEER_KEEPALIVE=25
 PEER_ALLOWEDIPS="$(nvram get vpnc_wg_peer_allowedips | tr -d ' ')"
 POST_SCRIPT="/etc/storage/vpnc_post_script.sh"
 
@@ -58,6 +59,7 @@ log()
 error()
 {
     log "error: $@" >&2
+    stop_wg
     exit 1
 }
 
@@ -125,10 +127,11 @@ EOF
         echo "$res" | while read i; do
             log "$i"
         done
+
+        stop_wg
         return 1
     fi
 }
-
 
 prevent_access_loss()
 {
@@ -158,7 +161,7 @@ add_default_route()
     ip rule add fwmark $FWMARK table $TABLE pref $PREF_WG
     ip route replace default dev $IF_NAME table $TABLE 2>/dev/null \
         && log "add default route dev $IF_NAME table $TABLE" \
-        || log "unable to add default route dev $IF_NAME table $TABLE"
+        || error "unable to add default route dev $IF_NAME table $TABLE"
 }
 
 add_route()
@@ -247,7 +250,7 @@ check_connected()
     if [ "$((now - lh))" -gt "300" ]; then
         log "latest handshake was more than 5 minutes ago"
         return 1
-    elif [ "$((now - lh))" -gt "120" ]; then
+    elif [ "$((now - lh))" -gt "$PEER_KEEPALIVE" ]; then
         send_ping
     fi
 
@@ -271,21 +274,23 @@ start_wg()
 {
     is_started && die "already started"
 
-    wg_if_init
-    add_route
-    wg_setdns
-    reload_wg
-
+    ipset_create
     start_watchdog &
     echo $! > "$PID_WATCHDOG"
 }
 
 start_watchdog()
 {
-    local pid=$(cat "$PID_WATCHDOG")
+    local pid="$(cat "$PID_WATCHDOG" 2>/dev/null)"
     local no_log
 
-    log "connection watchdog timer started"
+    # waiting restart zapret firewall rules
+    sleep 2
+
+    wg_if_init
+    add_route
+    wg_setdns
+    start_fw
 
     if check_connection_status; then
         log "successfully connected"
@@ -303,6 +308,8 @@ start_watchdog()
         fi
         sleep 10
     done
+
+    stop_fw
 }
 
 reload_wg()
@@ -323,12 +330,6 @@ update_wg()
 
 stop_wg()
 {
-    if [ -f "$PID_WATCHDOG" ]; then
-        kill "$(cat "$PID_WATCHDOG")" 2>/dev/null
-        rm -f "$PID_WATCHDOG"
-        log "connection watchdog timer stopped"
-    fi
-
     stop_fw
 
     ip route flush table $TABLE 2>/dev/null
@@ -491,7 +492,7 @@ $(ipt_set_rules)
 -A vpnc_wireguard_mark -m mark --mark $FWMARK -j CONNMARK --save-mark
 COMMIT
 EOF
-        [ $? -eq 0 ] || error "firewall rules update failed"
+        [ $? -eq 0 ] || log "firewall rules update failed"
     ) 200>/var/lock/wgc_iptables.lock
 }
 
