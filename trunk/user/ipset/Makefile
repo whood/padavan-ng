@@ -50,3 +50,4 @@ clean:
 
 romfs:
 	$(ROMFSINST) $(SRC_NAME)/src/ipset /sbin/ipset
+	$(ROMFSINST) -p +x /usr/bin/load-ipset.sh
