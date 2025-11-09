@@ -14,6 +14,10 @@ ifeq ($(wildcard $(srctree)/include/linux/skb_array.h),)
 ccflags-y += -I$(kbuild-dir)/compat/skb_array/include
 endif
 
+ifeq ($(wildcard $(srctree)/include/linux/hashtable.h),)
+ccflags-y += -I$(kbuild-dir)/compat/hashtable/include
+endif
+
 ifeq ($(wildcard $(srctree)/include/linux/siphash.h),)
 ccflags-y += -I$(kbuild-dir)/compat/siphash/include
 amneziawg-y += compat/siphash/siphash.o
@@ -38,6 +42,11 @@ endif
 
 ifeq ($(wildcard $(srctree)/include/linux/simd.h),)
 ccflags-y += -I$(kbuild-dir)/compat/simd/include
+endif
+
+ifeq ($(wildcard $(srctree)/include/net/ip_tunnels.h),)
+ccflags-y += -I$(kbuild-dir)/compat/ip_tunnel/include
+wireguard-y += compat/ip_tunnel/ip_tunnel.o
 endif
 
 ifeq ($(wildcard $(srctree)/include/net/udp_tunnel.h),)
@@ -134,4 +143,9 @@ endif
 
 ifeq ($(wildcard $(srctree)/include/linux/sprintf.h),)
 ccflags-y += -I$(kbuild-dir)/compat/sprintf/include
+endif
+
+ifdef ISPADAVAN
+ccflags-y += -I$(kbuild-dir)/compat/sock/include
+wireguard-y += compat/sock/sock.o
 endif

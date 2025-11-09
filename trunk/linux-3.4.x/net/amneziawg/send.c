@@ -249,7 +249,9 @@ static bool encrypt_packet(u32 message_type, size_t junk_size, struct sk_buff *s
 	/* Only after checksumming can we safely add on the padding at the end
 	 * and the header.
 	 */
+#ifndef ISPADAVAN
 	skb_set_inner_network_header(skb, 0);
+#endif
 	header = (struct message_data *)skb_push(skb, sizeof(*header));
 	header->header.type = cpu_to_le32(message_type);
 	header->key_idx = keypair->remote_index;
