@@ -15,18 +15,18 @@
 
 ### uncomment required feature
 ### don't forget to remove the relevant filters from the strategies
-CUSTOM_STUN4ALL=1
-CUSTOM_WG4ALL=1
-CUSTOM_QUICK4ALL=1
 CUSTOM_DISCORD=1
+CUSTOM_STUN4ALL=1
+# CUSTOM_WG4ALL=1
+# CUSTOM_QUICK4ALL=1
 ###
 
 
 ### custom desync strategy
+DESYNC_DISCORD="--dpi-desync=fake --dpi-desync-repeats=2"
 DESYNC_STUN4ALL="--dpi-desync=fake --dpi-desync-repeats=2"
 DESYNC_WG4ALL="--dpi-desync=fake --dpi-desync-repeats=11 --dpi-desync-fake-wireguard=/usr/share/zapret/fake/quic_initial_www_google_com.bin"
 DESYNC_QUICK4ALL="--dpi-desync=fake --dpi-desync-repeats=6"
-DESYNC_DISCORD="--dpi-desync=fake --dpi-desync-repeats=2"
 ###
 
 
@@ -40,10 +40,10 @@ custom_d()
 
   modprobe -q xt_u32
   # queue number = [ 300-309 ]
-  [ "$CUSTOM_STUN4ALL" ] && stun4all "$DESYNC_STUN4ALL" 300 "$1"
-  [ "$CUSTOM_WG4ALL" ] && wg4all "$DESYNC_WG4ALL" 301  "$1"
-  [ "$CUSTOM_QUICK4ALL" ] && quick4all "$DESYNC_QUICK4ALL" 302  "$1"
-  [ "$CUSTOM_DISCORD" ] && discord "$DESYNC_DISCORD" 303  "$1"
+  [ "$CUSTOM_DISCORD" ] && discord "$DESYNC_DISCORD" 300  "$1"
+  [ "$CUSTOM_STUN4ALL" ] && stun4all "$DESYNC_STUN4ALL" 301 "$1"
+  [ "$CUSTOM_WG4ALL" ] && wg4all "$DESYNC_WG4ALL" 302  "$1"
+  [ "$CUSTOM_QUICK4ALL" ] && quick4all "$DESYNC_QUICK4ALL" 303  "$1"
 }
 
 stun4all()
