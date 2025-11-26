@@ -92,6 +92,7 @@ dir_n =
 dir_  =
 
 dir_$(CONFIG_FIRMWARE_INCLUDE_NFQWS)		+= nfqws
+dir_$(CONFIG_FIRMWARE_INCLUDE_NFQWS2)		+= nfqws2
 dir_y						+= busybox
 dir_y						+= iptables
 dir_$(CONFIG_FIRMWARE_INCLUDE_IPSET)		+= ipset
