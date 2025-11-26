@@ -252,7 +252,7 @@ get_latest_handshakes()
 
 send_ping()
 {
-    timeout 1 ping -I $IF_NAME 255.255.255.255 >/dev/null 2>&1 &
+    timeout 1 ping -I $IF_NAME 255.255.255.255 >/dev/null 2>&1
 }
 
 check_connected()
@@ -311,11 +311,7 @@ start_watchdog()
     wg_setdns
     start_fw
 
-    if check_connection_status; then
-        log "successfully connected"
-    else
-        log "connection may be blocked: $PEER_ENDPOINT"
-    fi
+    check_connection_status && log "successfully connected"
 
     while is_started; do
         [ "$pid" = "$(cat $PID_WATCHDOG 2>/dev/null)" ] || die
@@ -325,7 +321,7 @@ start_watchdog()
             # disable spam to log
             no_log=1
         fi
-        sleep 10
+        sleep 15
     done
 
     stop_fw
@@ -361,6 +357,11 @@ stop_wg()
     ip link set $IF_NAME down 2>/dev/null
     ip link del dev $IF_NAME 2>/dev/null \
         && log "client stopped"
+
+    if [ -f "$PID_WATCHDOG" ]; then
+        kill "$(cat "$PID_WATCHDOG")" 2>/dev/null
+        rm -f "$PID_WATCHDOG"
+    fi
 }
 
 filter_ipv4()
@@ -415,6 +416,20 @@ ipset_create()
         ipset -q -N $name nethash \
             && log "ipset '$name' created successfully"
     done
+
+    for name in $(bogon_networks); do
+        ipset -q add $VPN_EXCLUDE_IPSET $name
+    done
+}
+
+bogon_networks()
+{
+    echo "0.0.0.0/8 127.0.0.0/8 169.254.0.0/16
+        100.64.0.0/10 198.18.0.0/15 192.88.99.0/24
+        192.0.0.0/24 192.0.2.0/24 198.51.100.0/24
+        203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
+        $(nvram get vpns_vnet)/24
+        $(nvram get lan_ipaddr)/$(nvram get lan_netmask)"
 }
 
 ipt_set_rules()
@@ -436,7 +451,7 @@ ipt_set_rules()
             done
         fi
     else
-        for i in $(filter_ipv4 < "$EXCLUDE_NETWORK_LIST"); do
+        for i in $(bogon_networks) $(filter_ipv4 < "$EXCLUDE_NETWORK_LIST"); do
             echo "-A vpnc_wireguard -d $i -j RETURN"
         done
 
@@ -494,20 +509,6 @@ start_fw()
 :vpnc_wireguard_mark - [0:0]
 -A PREROUTING -j vpnc_wireguard
 -A OUTPUT -j vpnc_wireguard
--A vpnc_wireguard -d $(nvram get lan_ipaddr)/$(nvram get lan_netmask) -j RETURN
--A vpnc_wireguard -d $(nvram get vpns_vnet)/24 -j RETURN
--A vpnc_wireguard -d 0.0.0.0/8 -j RETURN
--A vpnc_wireguard -d 127.0.0.0/8 -j RETURN
--A vpnc_wireguard -d 169.254.0.0/16 -j RETURN
--A vpnc_wireguard -d 100.64.0.0/10 -j RETURN
--A vpnc_wireguard -d 198.18.0.0/15 -j RETURN
--A vpnc_wireguard -d 192.88.99.0/24 -j RETURN
--A vpnc_wireguard -d 192.0.0.0/24 -j RETURN
--A vpnc_wireguard -d 192.0.2.0/24 -j RETURN
--A vpnc_wireguard -d 198.51.100.0/24 -j RETURN
--A vpnc_wireguard -d 203.0.113.0/24 -j RETURN
--A vpnc_wireguard -d 224.0.0.0/4 -j RETURN
--A vpnc_wireguard -d 240.0.0.0/4 -j RETURN
 -A vpnc_wireguard -p udp --dport 53 -j RETURN
 -A vpnc_wireguard -p tcp --dport 53 -j RETURN
 -A vpnc_wireguard -p udp --dport 123 -j RETURN
