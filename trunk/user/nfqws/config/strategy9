@@ -1,6 +1,7 @@
 ### http: filter all domains, exept exclude.list
 --filter-tcp=80
---dpi-desync=hostfakesplit --dpi-desync-hostfakesplit-mod=altorder=1
+--dpi-desync=hostfakesplit
+--dpi-desync-hostfakesplit-mod=altorder=1
 --dpi-desync-fooling=md5sig
 --hostlist-exclude=/etc/storage/zapret/exclude.list
 
@@ -8,13 +9,13 @@
 --new --filter-tcp=443
 --dpi-desync=fake,fakedsplit
 --dpi-desync-fakedsplit-mod=altorder=1
---dpi-desync-fakedsplit-pattern=0x43307e8f3c5c5f4c
+--dpi-desync-fakedsplit-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-split-pos=2,midsld
 --dpi-desync-fooling=badseq
 --dpi-desync-badseq-increment=10000000
 --dpi-desync-split-seqovl=2
---dpi-desync-split-seqovl-pattern=0x01d400faf69a3bcb
---dpi-desync-fake-tls=0x00000000
+--dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
+--dpi-desync-fake-tls=0x0F0F0F0F
 --dpi-desync-fake-tls=!
 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com
 --hostlist-exclude=/etc/storage/zapret/exclude.list
@@ -24,3 +25,12 @@
 --dpi-desync=fake --dpi-desync-repeats=6
 --dpi-desync-fake-quic=/usr/share/zapret/fake/quic_initial_www_google_com.bin
 --hostlist-exclude=/etc/storage/zapret/exclude.list
+
+### wireguard, discord, telegram
+--new --filter-udp=*
+--dpi-desync=fake --filter-l7=wireguard,discord,stun
+--dpi-desync-cutoff=n2
+--dpi-desync-repeats=6
+--dpi-desync-fake-discord=/usr/share/zapret/fake/quic_initial_www_google_com.bin
+--dpi-desync-fake-wireguard=/usr/share/zapret/fake/quic_initial_www_google_com.bin
+--dpi-desync-fake-unknown-udp=/usr/share/zapret/fake/quic_initial_www_google_com.bin

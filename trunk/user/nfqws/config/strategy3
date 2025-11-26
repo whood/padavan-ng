@@ -1,6 +1,7 @@
 ### http
 --filter-tcp=80
---dpi-desync=hostfakesplit --dpi-desync-hostfakesplit-mod=altorder=1
+--dpi-desync=hostfakesplit
+--dpi-desync-hostfakesplit-mod=altorder=1
 --dpi-desync-fooling=md5sig
 <HOSTLIST>
 
@@ -24,3 +25,12 @@
 --dpi-desync=fake --dpi-desync-repeats=6
 --dpi-desync-fake-quic=/usr/share/zapret/fake/quic_initial_www_google_com.bin
 <HOSTLIST_NOAUTO>
+
+### wireguard, discord, telegram
+--new --filter-udp=*
+--dpi-desync=fake --filter-l7=wireguard,discord,stun
+--dpi-desync-cutoff=n2
+--dpi-desync-repeats=6
+--dpi-desync-fake-discord=/usr/share/zapret/fake/quic_initial_www_google_com.bin
+--dpi-desync-fake-wireguard=/usr/share/zapret/fake/quic_initial_www_google_com.bin
+--dpi-desync-fake-unknown-udp=/usr/share/zapret/fake/quic_initial_www_google_com.bin
