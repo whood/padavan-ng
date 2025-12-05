@@ -1,12 +1,11 @@
 # https://github.com/bol-van/zapret2
 
-SRC_VER = 0.3
+SRC_VER = 0.4
 SRC_NAME = zapret2-$(SRC_VER)
 SRC_URL = https://github.com/bol-van/zapret2/archive/refs/tags/v$(SRC_VER).tar.gz
 
 CFLAGS += -DZAPRET_GH_VER=v$(SRC_VER) -DZAPRET_GH_HASH=release
 CFLAGS += -I$(STAGEDIR)/include/luajit-2.1
-#CFLAGS += $(if $(CONFIG_IPV6),-DUSE_IPV6,)
 
 all: download_test extract_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)

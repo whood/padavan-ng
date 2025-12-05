@@ -9,10 +9,8 @@
 ### http, https
 --filter-tcp=80,443 --filter-l7=http,tls
 --payload=http_req
---out-range=-d3
 --lua-desync=hostfakesplit:tcp_md5:tcp_ts_up
 --payload=tls_client_hello
---out-range=-d3
 --lua-desync=fake:blob=fake_default_tls:tcp_seq=-10000:repeats=2:tls_mod=rnd,dupsid,sni=fonts.google.com
 --lua-desync=fakeddisorder:pos=1,midsld:pattern=tls_google:seqovl=821:seqovl_pattern=tls_google:tcp_ack=-66000:tcp_ts_up
 <HOSTLIST>
@@ -20,12 +18,11 @@
 ### quic
 --new --filter-udp=443 --filter-l7=quic
 --payload=quic_initial
---out-range=-d3
 --lua-desync=fake:blob=quic_google:repeats=6
 <HOSTLIST_NOAUTO>
 
 ### wireguard, discord, telegram
 --new --filter-udp=* --filter-l7=wireguard,stun,discord
---payload=wireguard_initiation,wireguard_cookie,stun_binding_req,discord_ip_discovery
+--payload=wireguard_initiation,wireguard_cookie,stun,discord_ip_discovery
 --out-range=-d3
 --lua-desync=fake:blob=quic_google:repeats=6
