@@ -431,7 +431,7 @@ set_strategy_file "$2"
 
 # nfqws2 support
 unset NFQWS_VER
-grep -q "[-][-]lua-desync" "$STRATEGY_FILE" && NFQWS_VER=2
+grep -q "^[^#]*[-][-]lua-desync" "$STRATEGY_FILE" && NFQWS_VER=2
 
 [ -x "${NFQWS_BIN}${NFQWS_VER}" ] && NFQWS_BIN="${NFQWS_BIN}${NFQWS_VER}"
 [ -x "$NFQWS_BIN_OPT${NFQWS_VER}" ] && NFQWS_BIN="$NFQWS_BIN_OPT${NFQWS_VER}"
