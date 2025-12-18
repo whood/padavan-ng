@@ -485,8 +485,7 @@ stop_fw()
     ipt_remove_rule(){ while iptables -t $1 -C $2 2>/dev/null; do iptables -t $1 -D $2; done }
     ipt_remove_chain(){ iptables -t $1 -F $2 2>/dev/null && iptables -t $1 -X $2 2>/dev/null; }
 
-    ipt_remove_rule "mangle" "PREROUTING -j vpnc_wireguard"
-    ipt_remove_rule "mangle" "OUTPUT -j vpnc_wireguard"
+    ipt_remove_rule "mangle" "PREROUTING ! -i $IF_NAME -j vpnc_wireguard"
 
     ipt_remove_chain "mangle" "vpnc_wireguard"
     ipt_remove_chain "mangle" "vpnc_wireguard_remote"
@@ -507,8 +506,7 @@ start_fw()
 :vpnc_wireguard - [0:0]
 :vpnc_wireguard_remote - [0:0]
 :vpnc_wireguard_mark - [0:0]
--A PREROUTING -j vpnc_wireguard
--A OUTPUT -j vpnc_wireguard
+-A PREROUTING ! -i $IF_NAME -j vpnc_wireguard
 -A vpnc_wireguard -p udp --dport 53 -j RETURN
 -A vpnc_wireguard -p tcp --dport 53 -j RETURN
 -A vpnc_wireguard -p udp --dport 123 -j RETURN
