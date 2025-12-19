@@ -12,7 +12,8 @@ all: download_test extract_test config_test
 
 download_test:
 	( if [ ! -f $(SRC_NAME).tar.gz ]; then \
-		wget -t5 -T20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL) || rm -f $(SRC_NAME).tar.gz; \
+		wget -t5 -T20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL) \
+			|| rm -f $(SRC_NAME).tar.gz; \
 	fi )
 
 extract_test:
@@ -44,4 +45,4 @@ clean:
 romfs:
 	$(ROMFSINST) $(SRC_NAME)/build/https_dns_proxy /usr/sbin/https_dns_proxy
 	$(ROMFSINST) -p +x /usr/bin/doh_proxy.sh
-	$(ROMFSINST) -d /usr/share/dnsproxy/doh.json
+	$(ROMFSINST) -d /www/doh.json

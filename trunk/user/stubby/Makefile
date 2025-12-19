@@ -1,13 +1,19 @@
-SRC_NAME=stubby-0.4.3
-SRC_URL=https://github.com/getdnsapi/stubby/archive/refs/tags/v0.4.3.tar.gz
+# https://dnsprivacy.org/dns_privacy_daemon_-_stubby
+# https://github.com/getdnsapi/stubby
+
+SRC_NAME = stubby-0.4.3
+SRC_URL = https://github.com/getdnsapi/stubby/archive/refs/tags/v0.4.3.tar.gz
+
+CFLAGS += -ffunction-sections -fdata-sections -fvisibility=hidden
+LDFLAGS += -Wl,--gc-sections
 
 all: download_test extract_test config_test
-#all: config_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)/build
 
 download_test:
 	( if [ ! -f $(SRC_NAME).tar.gz ]; then \
-		wget -t5 -T20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL) || rm -f $(SRC_NAME).tar.gz; \
+		wget -t5 -T20 --no-check-certificate -O $(SRC_NAME).tar.gz $(SRC_URL) \
+			|| rm -f $(SRC_NAME).tar.gz; \
 	fi )
 
 extract_test:
@@ -39,4 +45,4 @@ clean:
 romfs:
 	$(ROMFSINST) $(SRC_NAME)/build/stubby /usr/sbin/stubby
 	$(ROMFSINST) -p +x /usr/bin/stubby.sh
-	$(ROMFSINST) -d /usr/share/dnsproxy/dot.json
+	$(ROMFSINST) -d /www/dot.json
