@@ -6,7 +6,7 @@
 ### https, http
 --filter-tcp=443,80 --filter-l7=http,tls <HOSTLIST>
 --payload=tls_client_hello
---lua-desync=hostfakesplit:host=www.ozon.ru:midhost=host-2:seqovl=sniext+3:seqovl_pattern=tls_google:tcp_ack=-66000:tcp_md5:tcp_ts_up
+--lua-desync=hostfakesplit:host=www.ozon.ru:midhost=host-2:seqovl=sniext+3:seqovl_pattern=tls_google:badsum:tcp_md5:tcp_ts_up
 --payload=http_req
 --lua-desync=hostfakesplit:tcp_md5:tcp_ts_up
 

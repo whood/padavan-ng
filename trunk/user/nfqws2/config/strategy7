@@ -6,7 +6,8 @@
 ### https, http
 --filter-tcp=443,80 --filter-l7=http,tls <HOSTLIST>
 --payload=tls_client_hello
---lua-desync=multisplit:pos=1,midsld,1220:seqovl=821:seqovl_pattern=tls_google:tcp_ts_up
+--lua-desync=fake:blob=fake_default_tls:tls_mod=rnd,dupsid,sni=fonts.google.com:tcp_seq=10000
+--lua-desync=multisplit:pos=1,midsld:seqovl=1:seqovl_pattern=tls_google:tcp_ts_up
 --payload=http_req
 --lua-desync=hostfakesplit:tcp_md5:tcp_ts_up
 

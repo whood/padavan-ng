@@ -9,22 +9,14 @@
 
 ### https
 --new --filter-tcp=443
---hostlist-domains=youtube.com,googlevideo.com,googleapis.com,ytimg.com,ggpht.com,forgecdn.net
---dpi-desync=multisplit --dpi-desync-split-pos=1,midsld --dpi-desync-split-seqovl=821
---dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
-
---new --filter-tcp=443
 --dpi-desync=fake,fakeddisorder
 --dpi-desync-split-pos=10,midsld
---dpi-desync-fake-tls=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
+--dpi-desync-fake-tls=!
 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=fonts.google.com
---dpi-desync-fake-tls=0x00000000
---dpi-desync-fake-tls-mod=none
---dpi-desync-fakedsplit-pattern=/usr/share/zapret/fake/tls_clienthello_vk_com.bin
+--dpi-desync-fakedsplit-pattern=/tmp/rnd1.bin
 --dpi-desync-split-seqovl=765
---dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_gosuslugi_ru.bin
---dpi-desync-fooling=badseq,badsum
---dpi-desync-badseq-increment=0
+--dpi-desync-split-seqovl-pattern=/tmp/rnd2.bin
+--dpi-desync-fooling=ts
 <HOSTLIST>
 
 ### quic

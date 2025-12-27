@@ -2,9 +2,9 @@
 
 ### http
 --filter-tcp=80
---dpi-desync=hostfakesplit
---dpi-desync-hostfakesplit-mod=altorder=1
---dpi-desync-fooling=md5sig
+--dpi-desync=fakeddisorder
+--dpi-desync-split-pos=midsld+2
+--dpi-desync-fooling=badsum
 <HOSTLIST>
 
 ### https
@@ -14,8 +14,9 @@
 --dpi-desync-hostfakesplit-midhost=host-2
 --dpi-desync-split-seqovl=sniext+3
 --dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_gosuslugi_ru.bin
---dpi-desync-fooling=badsum,badseq,md5sig
---dpi-desync-badseq-increment=0
+--dpi-desync-fooling=ts
+#--dpi-desync-fooling=badsum,badseq,md5sig
+#--dpi-desync-badseq-increment=0
 <HOSTLIST>
 
 ### quic

@@ -18,8 +18,9 @@
 --dpi-desync-fakedsplit-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-split-seqovl=821
 --dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
---dpi-desync-fooling=badseq,badsum
---dpi-desync-badseq-increment=0
+--dpi-desync-fooling=ts
+#--dpi-desync-fooling=badseq,badsum
+#--dpi-desync-badseq-increment=0
 <HOSTLIST>
 
 ### quic

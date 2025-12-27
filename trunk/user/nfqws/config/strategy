@@ -9,10 +9,12 @@
 
 ### https
 --new --filter-tcp=443
---dpi-desync=multisplit
+--dpi-desync=fake,multisplit
 --dpi-desync-split-pos=1,midsld
---dpi-desync-split-seqovl=821
+--dpi-desync-split-seqovl=1
 --dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
+--dpi-desync-fake-tls-mod=rnd,dupsid,sni=fonts.google.com
+--dpi-desync-fooling=ts
 <HOSTLIST>
 
 ### quic

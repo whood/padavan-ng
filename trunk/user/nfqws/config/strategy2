@@ -13,11 +13,12 @@
 --dpi-desync-fakedsplit-mod=altorder=1
 --dpi-desync-fakedsplit-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-split-pos=2,midsld
---dpi-desync-fooling=badseq
---dpi-desync-badseq-increment=0x10000000
 --dpi-desync-split-seqovl=2
 --dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com
+--dpi-desync-fooling=ts
+#--dpi-desync-fooling=badseq
+#--dpi-desync-badseq-increment=0x10000000
 <HOSTLIST>
 
 ### quic
