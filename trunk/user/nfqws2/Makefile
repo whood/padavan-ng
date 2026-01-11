@@ -1,11 +1,13 @@
 # https://github.com/bol-van/zapret2
 
-SRC_VER = 0.8.2
+SRC_VER = 0.8.3
 SRC_NAME = zapret2-$(SRC_VER)
 SRC_URL = https://github.com/bol-van/zapret2/archive/refs/tags/v$(SRC_VER).tar.gz
 
 CFLAGS += -DZAPRET_GH_VER=v$(SRC_VER) -DZAPRET_GH_HASH=release
 CFLAGS += -I$(STAGEDIR)/include/luajit-2.1
+CFLAGS += -ffunction-sections -fdata-sections -fvisibility=hidden
+LDFLAGS += -Wl,--gc-sections
 
 all: download_test extract_test
 	$(MAKE) -j$(HOST_NCPU) -C $(SRC_NAME)
