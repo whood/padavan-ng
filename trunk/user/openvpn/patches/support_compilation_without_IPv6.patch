@@ -1,0 +1,18 @@
+--- openvpn-2.6.17.orig/src/openvpn/socket.c
++++ openvpn-2.6.17/src/openvpn/socket.c
+@@ -2927,13 +2927,14 @@
+ {
+     struct buffer out = alloc_buf_gc(64, gc);
+     char tmp_out_buf[64];       /* inet_ntop wants pointer to buffer */
+-
++#ifdef CONFIG_IPV6
+     if (memcmp(&a6, &in6addr_any, sizeof(a6)) != 0
+         || !(flags & IA_EMPTY_IF_UNDEF))
+     {
+         inet_ntop(AF_INET6, &a6, tmp_out_buf, sizeof(tmp_out_buf)-1);
+         buf_printf(&out, "%s", tmp_out_buf );
+     }
++#endif
+     return BSTR(&out);
+ }
+ 
