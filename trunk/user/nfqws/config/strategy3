@@ -3,21 +3,18 @@
 ### http
 --filter-tcp=80
 --dpi-desync=hostfakesplit
---dpi-desync-hostfakesplit-mod=altorder=1
 --dpi-desync-fooling=md5sig
 <HOSTLIST>
 
 ### https
 --new --filter-tcp=443
---dpi-desync=fake,multidisorder
-#--dpi-desync-fake-tls=0x00000000
---dpi-desync-fake-tls=!
---dpi-desync-fake-tls-mod=rnd,dupsid,sni=fonts.google.com
---dpi-desync-split-pos=1,midsld
---dpi-desync-repeats=2
+--dpi-desync=fake,fakeddisorder
+--dpi-desync-split-pos=1220
+--dpi-desync-fakedsplit-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
+--dpi-desync-fake-tls=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-fooling=ts
-#--dpi-desync-fooling=badseq
-#--dpi-desync-badseq-increment=0x10000000
+--dpi-desync-split-seqovl=769
+--dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 <HOSTLIST>
 
 ### quic

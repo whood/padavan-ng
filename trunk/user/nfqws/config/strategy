@@ -1,9 +1,9 @@
 ### All arguments here: https://github.com/bol-van/zapret
+# To enable ts fooling in Windows: netsh interface tcp set global timestamps=enabled
 
 ### http
 --filter-tcp=80
 --dpi-desync=hostfakesplit
---dpi-desync-hostfakesplit-mod=altorder=1
 --dpi-desync-fooling=md5sig
 <HOSTLIST>
 
@@ -11,8 +11,6 @@
 --new --filter-tcp=443
 --dpi-desync=fake,multisplit
 --dpi-desync-split-pos=1,midsld
---dpi-desync-split-seqovl=1
---dpi-desync-split-seqovl-pattern=/usr/share/zapret/fake/tls_clienthello_www_google_com.bin
 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=fonts.google.com
 --dpi-desync-fooling=ts
 <HOSTLIST>
